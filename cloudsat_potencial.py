@@ -18,14 +18,21 @@ input = './Dados'
 output = './Figuras'
 
 # nome do arquivo geoprof
-geoprof_fname = '2019055170406_68325_CS_2B-GEOPROF_GRANULE_P_R04_E08_F01.h5'
-ecmwf_fname = '2019055170406_68325_CS_ECMWF-AUX_GRANULE_P_R05_E08_F03.h5'
+# geoprof_fname = '2019055170406_68325_CS_2B-GEOPROF_GRANULE_P_R04_E08_F01.h5'
+geoprof_fname = '2010225163215_22839_CS_2B-GEOPROF_GRANULE_P1_R05_E03_F00.h5'
+
+# ecmwf_fname = '2019055170406_68325_CS_ECMWF-AUX_GRANULE_P_R05_E08_F03.h5'
+ecmwf_fname = '2010225163215_22839_CS_ECMWF-AUX_GRANULE_P_R05_E03_F00.h5'
 
 # recorte da area de estudo
-lat_min = -35
-lat_max = -27
-lon_min = -65
-lon_max = -40
+# lat_min = -35
+# lat_max = -27
+# lon_min = -65
+# lon_max = -40
+lat_min = -40.6
+lat_max = -29.1
+lon_min = -47.6
+lon_max = -44.4
 extent = [lon_min, lon_max, lat_min, lat_max] # South America
 
 #---Cloudsat Refletividade--------------------------------------------------------------------------
@@ -38,8 +45,6 @@ cldst_lons, cldst_lats, cldst_height, cldst_time, cldst_elev = get_geodata(
     os.path.join(input, geoprof_fname), return_list=True
 )
 cldst_elev = cldst_elev * 1e-3 # convertendo elevacao para km.
-print(cldst_lons)
-print(cldst_lats)
 
 # Encontrar indices do array onde o recorte da area esta localizado
 ii = np.where(
@@ -78,12 +83,24 @@ cldst_radar = cloudsat_utils.cc_interp2d(
 #---Cloudsat Temperatura Potencial--------------------------------------------------------------------------
 
 # Temperatura e Pressao retirado do ECMWF e interpolado na trajetoria do cloudsat
-ecmwf_temp = read_data(os.path.join(input, ecmwf_fname), data_field = 'Temperature')
+ecmwf_temp = read_data(os.path.join(input, ecmwf_fname), data_field = 'Temperature') # em kelvin
 ecmwf_press = read_data(os.path.join(input, ecmwf_fname), data_field = 'Pressure')*1e-2 # converte de Pa para hPa
+ecmwf_specific_umidity =  read_data(os.path.join(input, ecmwf_fname), data_field = 'Specific_humidity') # em kg/kg
 
 # calculo de theta
 R = 0.286
 theta = ecmwf_temp*(1000/ecmwf_press)**(R)
+
+# calculo da pressao de vapor de saturacao
+A = 2.53*(10**8)*10 # kPam converte pra hPa
+B = 5.42*(10**3) # K
+
+# calculo da theta_e (temperatura potencial equivalente)
+Td = B/np.log(A*0.622/(ecmwf_press*ecmwf_specific_umidity)) # em kelvin
+Tncl = 1/(1/(Td-56)+np.log(ecmwf_temp/Td)/800)+56
+L = 2.5e6
+Cp = 1005
+theta_e = theta*np.exp(ecmwf_specific_umidity*L/(Cp*Tncl))
 
 # demais dimensoes do dado do ecmwf interpolado no cloudsat
 ecmwf_lons, ecmwf_lats, ecmwf_height, ecmwf_time, ecmwf_elev = get_geodata(
@@ -111,11 +128,11 @@ ecmwf_nz = 1000  # Number of pixels (levels) in the vertical.
 ecmwf_z = (ecmwf_height * 1e-3).astype(np.float32)
 
 # indexando a variavel temperatura potencial
-theta = theta[j1:j2, :]
+theta_e = theta_e[j1:j2, :]
 
 # interpolar a temperatura potencial para os niveis de referencia
-theta = cloudsat_utils._interp2d_ecmwf(
-    theta.filled(np.nan),
+theta_e = cloudsat_utils._interp2d_ecmwf(
+    theta_e.filled(np.nan),
     ecmwf_x,
     ecmwf_z,
     j1,
@@ -140,7 +157,7 @@ clevtheta = np.arange(250, 400, 5)
 theta_contour = ax.contour(
     ecmwf_lats[j1:j2],
     np.linspace(ecmwf_z0, ecmwf_z1, ecmwf_nz),
-    theta,
+    theta_e,
     clevtheta,
     colors='green',
     linewidths=1.25,
@@ -192,7 +209,7 @@ ax.fill_between(
 # titulos e eixos
 ax.set_xlabel("Latitude (°)")
 ax.set_ylabel("Altitude (Km)")
-plt.title('Refletividade do Radar (DbZ) e Temperatura Potencial (K)', loc='left')
+plt.title('Refletividade do Radar (DbZ) e Temperatura Potencial Equivalente (K)', loc='left')
 
 # salvando a figura
 plt.savefig(os.path.join(output, 'cloudsat_refletividade.png'), bbox_inches='tight')
