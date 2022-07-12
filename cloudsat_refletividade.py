@@ -16,11 +16,12 @@ from cloudsat_read import get_geodata, read_data
 
 #---VARIAVEIS E PREPARATIVOS--------------------------------------------------------------------------
 # Diretorios de entrada e saida de arquivos
-input = '/mnt/f/Lucas/Conteudo/Fisica das nuvens e precipitacao/Trabalho/Dados'
-output = '/mnt/f/Lucas/Conteudo/Fisica das nuvens e precipitacao/Trabalho/Figuras'
+input = './Dados'
+output = './Figuras'
 
 # nome do arquivo geoprof
-geoprof_fname = '2019055170406_68325_CS_2B-GEOPROF_GRANULE_P_R04_E08_F01.h5'
+# geoprof_fname = '2019055170406_68325_CS_2B-GEOPROF_GRANULE_P_R04_E08_F01.h5'
+geoprof_fname = '2010225163215_22839_CS_2B-GEOPROF_GRANULE_P1_R05_E03_F00.h5'
 
 # recorte da area de estudo
 lat_min = -35
