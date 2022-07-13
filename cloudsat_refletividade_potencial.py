@@ -1,48 +1,48 @@
 #---IMPORTS----------------------------------------------------------------------------------------
 import os
-import scipy.ndimage
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt  # the plotting interface
 import matplotlib.colors as mcolors
 import numpy as np  # for numerical array computations
+import matplotlib.tri as tri
+import metpy.calc.thermo as thermo # calculo da propriedades termodinamicas
+from metpy.units import units
 
 #---IMPORTS LOCAIS----------------------------------------------------------------------------------------
 
+from cloudsat_functions import get_hdf_geodata, get_hdf_data
 import cloudsat_utils
-from cloudsat_read import get_geodata, read_data
 
 #---VARIAVEIS E PREPARATIVOS--------------------------------------------------------------------------
 # Diretorios de entrada e saida de arquivos
-input = './Dados'
-output = './Figuras'
+input_ = '/mnt/f/lucas/conteudo/fisica das nuvens e precipitacao/Dados'
+output = '/mnt/f/lucas/conteudo/fisica das nuvens e precipitacao/Figuras'
 
 # nome do arquivo geoprof
-# geoprof_fname = '2019055170406_68325_CS_2B-GEOPROF_GRANULE_P_R04_E08_F01.h5'
-geoprof_fname = '2010225163215_22839_CS_2B-GEOPROF_GRANULE_P1_R05_E03_F00.h5'
+geoprof_fname = '2019055170406_68325_CS_2B-GEOPROF_GRANULE_P1_R05_E08_F03.hdf'
 
-# ecmwf_fname = '2019055170406_68325_CS_ECMWF-AUX_GRANULE_P_R05_E08_F03.h5'
-ecmwf_fname = '2010225163215_22839_CS_ECMWF-AUX_GRANULE_P_R05_E03_F00.h5'
+ecmwf_fname = '2019055170406_68325_CS_ECMWF-AUX_GRANULE_P_R05_E08_F03.hdf'
 
 # recorte da area de estudo
-# lat_min = -35
-# lat_max = -27
-# lon_min = -65
-# lon_max = -40
-lat_min = -40.6
-lat_max = -29.1
-lon_min = -47.6
-lon_max = -44.4
+lat_min = -35
+lat_max = -27.5
+lon_min = -65
+lon_max = -40
 extent = [lon_min, lon_max, lat_min, lat_max] # South America
 
 #---Cloudsat Refletividade--------------------------------------------------------------------------
 
 # Refletividade do cloudsat
-cldst_radar = read_data(os.path.join(input, geoprof_fname))
+cldst_radar = get_hdf_data(os.path.join(input_, geoprof_fname), "Radar_Reflectivity")
+fator = 100 # fator dessa variavel
+offset = 0 # offset dessa variavel
+cldst_radar = (cldst_radar - offset)/fator
 
 # dimensoes do dado
-cldst_lons, cldst_lats, cldst_height, cldst_time, cldst_elev = get_geodata(
-    os.path.join(input, geoprof_fname), return_list=True
+cldst_lons, cldst_lats, cldst_height, cldst_time, cldst_elev = get_hdf_geodata(
+    os.path.join(input_, geoprof_fname),
+    varnames = ["Longitude", "Latitude", "Height", "Profile_time", "DEM_elevation"]
 )
 cldst_elev = cldst_elev * 1e-3 # convertendo elevacao para km.
 
@@ -63,48 +63,66 @@ cloudsat_z0 = 1  # km
 cloudsat_z1 = 16  # km
 cloudsat_nz = 1000  # Number of pixels (levels) in the vertical.
 cloudsat_z = (cldst_height * 1e-3).astype(np.float32)
+zi = np.linspace(cloudsat_z0, cloudsat_z1, cloudsat_nz)
+
+# coordenadas e valores
+XX = np.tile(cloudsat_x, (cldst_radar.shape[1], 1)).T
+x_coords = np.ravel(XX)
+y_coords = np.ravel(cloudsat_z[i1:i2, :])
+coords = np.column_stack((x_coords, y_coords))
+
+# interpolar a temperatura potencial para os niveis de referencia
+triang = tri.Triangulation(coords[:, 0], coords[:, 1])
+Xi, Yi = np.meshgrid(cloudsat_x, zi)
 
 # indexando a refletividade do radar
 cldst_radar = cldst_radar[i1:i2, :]
 
-# interpolar a refletividade do radar para niveis verticais regulares
-cldst_radar = cloudsat_utils.cc_interp2d(
-    cldst_radar.filled(np.nan),
-    cloudsat_x,
-    cloudsat_z,
-    i1,
-    i2,
-    i2 - i1,
-    cloudsat_z1,
-    cloudsat_z0,
-    cloudsat_nz,
-).T[::-1, :]
+# interpolando 
+interpolator = tri.LinearTriInterpolator(
+    triang,
+    np.ravel(cldst_radar)
+)
+cldst_radar = interpolator(Xi, Yi)
+
 
 #---Cloudsat Temperatura Potencial--------------------------------------------------------------------------
 
 # Temperatura e Pressao retirado do ECMWF e interpolado na trajetoria do cloudsat
-ecmwf_temp = read_data(os.path.join(input, ecmwf_fname), data_field = 'Temperature') # em kelvin
-ecmwf_press = read_data(os.path.join(input, ecmwf_fname), data_field = 'Pressure')*1e-2 # converte de Pa para hPa
-ecmwf_specific_umidity =  read_data(os.path.join(input, ecmwf_fname), data_field = 'Specific_humidity') # em kg/kg
+ecmwf_temp = get_hdf_data(os.path.join(input_, ecmwf_fname), 'Temperature') # em kelvin
+ecmwf_press = get_hdf_data(os.path.join(input_, ecmwf_fname), 'Pressure')*1e-2 # converte de Pa para hPa
+ecmwf_specific_umidity =  get_hdf_data(os.path.join(input_, ecmwf_fname), 'Specific_humidity') # em kg/kg
 
-# calculo de theta
-R = 0.286
-theta = ecmwf_temp*(1000/ecmwf_press)**(R)
+ecmwf_dewpoint = thermo.dewpoint_from_specific_humidity(
+    pressure = ecmwf_press * units.mbar,
+    temperature = ecmwf_temp * units.kelvin,
+    specific_humidity = ecmwf_specific_umidity * units("dimensionless")
+).to(units.kelvin)
 
-# calculo da pressao de vapor de saturacao
-A = 2.53*(10**8)*10 # kPam converte pra hPa
-B = 5.42*(10**3) # K
+theta_e = thermo.equivalent_potential_temperature(
+    pressure = ecmwf_press * units.mbar,
+    temperature = ecmwf_temp * units.kelvin,
+    dewpoint = ecmwf_dewpoint
+)
 
-# calculo da theta_e (temperatura potencial equivalente)
-Td = B/np.log(A*0.622/(ecmwf_press*ecmwf_specific_umidity)) # em kelvin
-Tncl = 1/(1/(Td-56)+np.log(ecmwf_temp/Td)/800)+56
-L = 2.5e6
-Cp = 1005
-theta_e = theta*np.exp(ecmwf_specific_umidity*L/(Cp*Tncl))
+# # calculo de theta
+# R = 0.286
+# theta = ecmwf_temp*(1000/ecmwf_press)**(R)
+
+# # calculo da pressao de vapor de saturacao
+# A = 2.53*(10**8)*10 # kPam converte pra hPa
+# B = 5.42*(10**3) # K
+
+# # calculo da theta_e (temperatura potencial equivalente)
+# Td = B/np.log(A*0.622/(ecmwf_press*ecmwf_specific_umidity)) # em kelvin
+# Tncl = 1/(1/(Td-56)+np.log(ecmwf_temp/Td)/800)+56
+# L = 2.5e6
+# Cp = 1005
+# theta_e = theta*np.exp(ecmwf_specific_umidity*L/(Cp*Tncl))
 
 # demais dimensoes do dado do ecmwf interpolado no cloudsat
-ecmwf_lons, ecmwf_lats, ecmwf_height, ecmwf_time, ecmwf_elev = get_geodata(
-    os.path.join(input, ecmwf_fname), return_list=True,
+ecmwf_lons, ecmwf_lats, ecmwf_height, ecmwf_time, ecmwf_elev = get_hdf_geodata(
+    os.path.join(input_, ecmwf_fname),
     varnames = ["Longitude", "Latitude", "EC_height", "Profile_time", "DEM_elevation"]
 )
 
@@ -128,11 +146,11 @@ ecmwf_nz = 1000  # Number of pixels (levels) in the vertical.
 ecmwf_z = (ecmwf_height * 1e-3).astype(np.float32)
 
 # indexando a variavel temperatura potencial
-theta_e = theta_e[j1:j2, :]
+theta_e = np.array(theta_e[j1:j2, :])
 
 # interpolar a temperatura potencial para os niveis de referencia
 theta_e = cloudsat_utils._interp2d_ecmwf(
-    theta_e.filled(np.nan),
+    theta_e,
     ecmwf_x,
     ecmwf_z,
     j1,
@@ -152,7 +170,7 @@ fig, ax = plt.subplots(figsize=(22, 6), dpi = 200)
 
 # plot das isolinhas de temperatura potencial
 kw_clabels = {'fontsize': 12, 'inline': True, 'inline_spacing': 5, 'fmt': '%i',
-              'rightside_up': True, 'use_clabeltext': True}
+              'rightside_up': True, 'use_clabeltext': True, 'colors' : "darkgreen"}
 clevtheta = np.arange(250, 400, 5)
 theta_contour = ax.contour(
     ecmwf_lats[j1:j2],
@@ -184,6 +202,7 @@ radr_cmap = mcolors.LinearSegmentedColormap.from_list(
     'Custom cmap', colors/255, clevs.shape[0] - 1)
 radr_cmap.set_bad("w")
 radr_cmap.set_under("w")
+radr_cmap.set_over("darkred")
 
 # nromaliza com base nos intervalos
 radr_norm = mpl.colors.BoundaryNorm(clevs, radr_cmap.N)
@@ -191,13 +210,14 @@ radr_kw = dict(cmap=radr_cmap, norm=radr_norm)
 
 # plot contourf
 p = ax.contourf(
-    cldst_lats[i1:i2],
-    np.linspace(cloudsat_z0, cloudsat_z1, cloudsat_nz),
+    np.take(cldst_lats, Xi.astype(np.int64)),
+    Yi,
     cldst_radar,
     levels = clevs,
+    extend = "max",
     **radr_kw
 )
-cbar = fig.colorbar(p, location = 'right', pad = 0.03)
+cbar = fig.colorbar(p, location = 'right', pad = 0.03, extend = "max")
 
 # plot da elevacao
 ax.fill_between(
@@ -209,7 +229,8 @@ ax.fill_between(
 # titulos e eixos
 ax.set_xlabel("Latitude (°)")
 ax.set_ylabel("Altitude (Km)")
-plt.title('Refletividade do Radar (DbZ) e Temperatura Potencial Equivalente (K)', loc='left')
+ax.set_ylim(bottom = 0)
+plt.title('Refletividade do Radar (dBZe) e Temperatura Potencial Equivalente (K)', loc='left')
 
 # salvando a figura
 plt.savefig(os.path.join(output, 'cloudsat_refletividade.png'), bbox_inches='tight')

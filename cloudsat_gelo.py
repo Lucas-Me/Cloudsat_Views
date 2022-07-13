@@ -11,40 +11,38 @@ import matplotlib.tri as tri
 
 #---IMPORTS LOCAIS----------------------------------------------------------------------------------------
 
+from cloudsat_functions import get_hdf_geodata, get_hdf_data
 import cloudsat_utils
-from cloudsat_read import get_geodata, read_data
 
 #---VARIAVEIS E PREPARATIVOS--------------------------------------------------------------------------
 # Diretorios de entrada e saida de arquivos
-input = './Dados'
-output = './Figuras'
+input_ = '/mnt/f/lucas/conteudo/fisica das nuvens e precipitacao/Dados'
+output = '/mnt/f/lucas/conteudo/fisica das nuvens e precipitacao/Figuras'
 
-# nome do arquivo geoprof
+# nome do arquivo _
 # cwc_fname = '2019055170406_68325_CS_2B-CWC-RO_GRANULE_P1_R05_E08_F03.h5'
 # ecmwf_fname = '2019055170406_68325_CS_ECMWF-AUX_GRANULE_P_R05_E08_F03.h5'
-cwc_fname = '2010225163215_22839_CS_2B-CWC-RO_GRANULE_P1_R05_E03_F00.h5'
-ecmwf_fname = '2010225163215_22839_CS_ECMWF-AUX_GRANULE_P_R05_E03_F00.h5'
+
+# nome do arquivo CWC-RO e do AUX-ECMWF
+cwc_fname = '2006235200711_01711_CS_2B-CWC-RO_GRANULE_P1_R05_E02_F00.hdf'
+ecmwf_fname = '2006235200711_01711_CS_ECMWF-AUX_GRANULE_P_R05_E02_F00.hdf'
 
 # recorte da area de estudo
-# lat_min = -35
-# lat_max = -27
-# lon_min = -65
-# lon_max = -40
-lat_min = -40.6
-lat_max = -29.1
-lon_min = -47.6
-lon_max = -44.4
+lat_min = 17.1
+lat_max = 28.6
+lon_min = -114.8
+lon_max = -112
 extent = [lon_min, lon_max, lat_min, lat_max] # South America
 
 
 #--------------------------------------------Cloudsat Temperatura --------------------------------------------------------------------------
 
 # Temperatura retirado do ECMWF e interpolado na trajetoria do cloudsat
-ecmwf_temp = read_data(os.path.join(input, ecmwf_fname), data_field = 'Temperature')
+ecmwf_temp = get_hdf_data(os.path.join(input_, ecmwf_fname), 'Temperature')
 
 # demais dimensoes do dado do ecmwf interpolado no cloudsat
-ecmwf_lons, ecmwf_lats, ecmwf_height, ecmwf_time, ecmwf_elev = get_geodata(
-    os.path.join(input, ecmwf_fname), return_list=True,
+ecmwf_lons, ecmwf_lats, ecmwf_height, ecmwf_time, ecmwf_elev = get_hdf_geodata(
+    os.path.join(input_, ecmwf_fname),
     varnames = ["Longitude", "Latitude", "EC_height", "Profile_time", "DEM_elevation"]
 )
 
@@ -72,7 +70,7 @@ temperature = ecmwf_temp [i1:i2, :]
 
 # interpolar a temperatura potencial para os niveis de referencia
 temperature = cloudsat_utils._interp2d_ecmwf(
-    temperature.filled(np.nan),
+    temperature,
     ecmwf_x,
     ecmwf_z,
     i1,
@@ -86,13 +84,13 @@ temperature = cloudsat_utils._interp2d_ecmwf(
 #--------------------------------------------Cloudsat Conteudo de agua liquda--------------------------------------------------------------------------
 
 # variaveis da goticula, retirada do cloudsat
-radius = read_data(os.path.join(input, cwc_fname), data_field = 'RO_ice_effective_radius') # micrometro
-concentracao = read_data(os.path.join(input, cwc_fname), data_field = 'RO_ice_number_conc') # cm^{-3}
-conteudo = read_data(os.path.join(input, cwc_fname), data_field = 'RO_ice_water_content') # mg/m^3
+radius = get_hdf_data(os.path.join(input_, cwc_fname),'RO_ice_effective_radius') # micrometro
+concentracao = get_hdf_data(os.path.join(input_, cwc_fname), 'RO_ice_number_conc') # cm^{-3}
+conteudo = get_hdf_data(os.path.join(input_, cwc_fname), 'RO_ice_water_content') # mg/m^3
 
 # demais dimensoes do dado do ecmwf interpolado no cloudsat
-cwc_lons, cwc_lats, cwc_height, cwc_time, cwc_elev = get_geodata(
-    os.path.join(input, cwc_fname), return_list=True,
+cwc_lons, cwc_lats, cwc_height, cwc_time, cwc_elev = get_hdf_geodata(
+    os.path.join(input_, cwc_fname), 
     varnames = ["Longitude", "Latitude", "Height", "Profile_time", "DEM_elevation"]
 )
 
@@ -128,9 +126,9 @@ triang = tri.Triangulation(coords[:, 0], coords[:, 1])
 Xi, Yi = np.meshgrid(cwc_x, zi)
 
 # indexando as variaveis
-radius = radius[j1:j2, :].filled(np.nan)
-concentracao = concentracao[j1:j2, :].filled(np.nan)
-conteudo = conteudo[j1:j2, :].filled(np.nan)*1e-3
+radius = radius[j1:j2, :]
+concentracao = concentracao[j1:j2, :]
+conteudo = conteudo[j1:j2, :]*1e-3
 
 vars_ = [radius, concentracao, conteudo]
 for i in range(len(vars_)):
@@ -168,12 +166,21 @@ colors = np.array([
     'red'
 ])
 
+# eixo horizontal
+xticks, xticklabels = cloudsat_utils.xticks_alongtrack(
+    x_indices = cwc_x,
+    x_lons = cwc_lons[j1:j2],
+    x_lats = cwc_lats[j1:j2],
+    bins = 6
+)
+
 for row in range(3):
     # plot das isolinhas de temperatura
     kw_clabels = {'fontsize': 12, 'inline': True, 'inline_spacing': 5, 'fmt': '%i',
                 'rightside_up': True, 'use_clabeltext': True}
     temp_contour = ax[row].contour(
-        ecmwf_lats[i1:i2],
+        # ecmwf_lats[i1:i2],
+        ecmwf_x,
         np.linspace(ecmwf_z0, ecmwf_z1, ecmwf_nz),
         temperature - 273.15,
         np.linspace(-60, 20, 5),
@@ -196,7 +203,8 @@ for row in range(3):
 
     # plot contourf
     p = ax[row].contourf(
-        np.take(cwc_lats, Xi),
+        #np.take(cwc_lats, Xi),
+        Xi,
         Yi,
         vars_[row],
         levels = clevs[row],
@@ -209,13 +217,19 @@ for row in range(3):
     ax[row].set_xlabel("Latitude (°)")
     ax[row].set_ylabel("Altitude (Km)")
     ax[row].set_title(labels[row], loc='left')
+    #ax[row].set_xticks(xticks)
+    #ax[row].set_xticklabels(xticklabels)
 
     # plot da elevacao
     ax[row].fill_between(
-        cwc_lats[j1:j2],
+        #cwc_lats[j1:j2],
+        cwc_x,
         cwc_elev[j1:j2]*1e-3,
         color = "black"
     )
+
+    # limite vertical do plot
+    ax[row].set_ylim(bottom = 0)
 
 # salvando a figura
 plt.savefig(os.path.join(output, 'propriedades_gelo.png'), bbox_inches='tight')

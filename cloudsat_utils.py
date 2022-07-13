@@ -2,6 +2,38 @@
 """Auxiliary functions for sattools module."""
 import numpy as np
 
+def xticks_alongtrack(x_indices, x_lons, x_lats, bins = 2):
+    """
+    Fornece a coordenada ao longo da trajetoria do cloudsat
+    dado os intervalos horizontais.
+    Util para formatacao do eixo horizontal do plot.
+    """
+    if bins < 2:
+        bins = 2
+
+    # selecao dos indices a serem utilizados
+    idx_min = np.min(x_indices)
+    idx_max = np.max(x_indices)
+    new_xticks = np.linspace(
+        idx_min, 
+        idx_max, 
+        bins
+        ).astype(np.int64)
+    
+    # extrai os respectivos lat e lons
+    xticks = new_xticks - idx_min
+    lons = np.take(x_lons, xticks)
+    lats = np.take(x_lats, xticks)
+
+    # formatacao
+    xtick_labels = [0]*bins
+    for i in range(bins):
+        lat_suffix = "N" if lats[i] >= 0 else "S"
+        lon_suffix = "E" if lons[i] >= 0 else "W"
+        xtick_labels[i] = f"{np.abs(lats[i]):.1f}{lat_suffix}|{np.abs(lons[i]):.1f}{lon_suffix}" 
+
+    return new_xticks, xtick_labels
+
 
 def cc_interp2d(data, X, Z, x1, x2, nx, z1, z2, nz, use_numba=True):
     res = _interp2d(data, X, Z, x1, x2, nx, z1, z2, nz)

@@ -18,8 +18,8 @@ import cloudsat_utils
 
 #---VARIAVEIS E PREPARATIVOS--------------------------------------------------------------------------
 # Diretorios de entrada e saida de arquivos
-input_ = './Dados'
-output = './Figuras'
+input_ = '/mnt/f/lucas/conteudo/fisica das nuvens e precipitacao/Dados'
+output = '/mnt/f/lucas/conteudo/fisica das nuvens e precipitacao/Figuras'
 
 # nome do arquivo CWC-RO e do AUX-ECMWF
 cwc_fname = '2013236170427_38965_CS_2B-CWC-RO_GRANULE_P1_R05_E06_F00.hdf'

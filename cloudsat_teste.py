@@ -22,13 +22,13 @@ input_ = '/mnt/f/lucas/conteudo/fisica das nuvens e precipitacao/Dados'
 output = '/mnt/f/lucas/conteudo/fisica das nuvens e precipitacao/Figuras'
 
 # nome do arquivo CWC-RO e do AUX-ECMWF
-cwc_fname = '2007124170226_05408_CS_2B-CWC-RO_GRANULE_P1_R05_E02_F00.hdf'
+cwc_fname = '2006235200711_01711_CS_2B-CWC-RO_GRANULE_P1_R05_E02_F00.hdf'
 
 # recorte da area de estudo
-lat_min = -40.6
-lat_max = -29.1
-lon_min = -55.3
-lon_max = -52
+lat_min = 17.1
+lat_max = 28.6
+lon_min = -114.8
+lon_max = -112
 extent = [lon_min, lon_max, lat_min, lat_max] # South America
 
 #--------------------------------------------Cloudsat CWC-RO --------------------------------------------------------------------------
