@@ -302,7 +302,7 @@ def reproject(file_name, ncfile, array, extent, undef):
     kwargs = {'format': 'netCDF', \
             'srcSRS': source_prj, \
             'dstSRS': target_prj, \
-            'outputBounds': (extent[0], extent[3], extent[2], extent[1]), \
+            'outputBounds': (extent[0], extent[3], extent[1], extent[2]), \
             'outputBoundsSRS': target_prj, \
             'outputType': gdal.GDT_Float32, \
             'srcNodata': undef, \

@@ -11,39 +11,38 @@ import matplotlib.tri as tri
 
 #---IMPORTS LOCAIS----------------------------------------------------------------------------------------
 
-from cloudsat_functions import get_hdf_geodata, get_hdf_data
+from cloudsat_read import get_geodata, read_data
 import cloudsat_utils
 
 #---VARIAVEIS E PREPARATIVOS--------------------------------------------------------------------------
 # Diretorios de entrada e saida de arquivos
-input_ = '/mnt/f/lucas/conteudo/fisica das nuvens e precipitacao/Dados'
-output = '/mnt/f/lucas/conteudo/fisica das nuvens e precipitacao/Figuras'
+# input_ = '/mnt/f/Lucas/Conteudo/Fisica das nuvens e precipitacao/Dados'
+# output_ = '/mnt/f/Lucas/Conteudo/Fisica das nuvens e precipitacao/Figuras'
+input_ = r'F:\Lucas\Conteudo\Fisica das nuvens e precipitacao\Dados'
+output_ = r'F:\Lucas\Conteudo\Fisica das nuvens e precipitacao\Figuras'
 
-# nome do arquivo _
-# cwc_fname = '2019055170406_68325_CS_2B-CWC-RO_GRANULE_P1_R05_E08_F03.h5'
-# ecmwf_fname = '2019055170406_68325_CS_ECMWF-AUX_GRANULE_P_R05_E08_F03.h5'
+# nome dos arquivos CWC-RO e do AUX-ECMWF (caso continental)
+cwc_fname = 'frente_continental_2B-CWC-RO_P1_R05.h5'
+ecmwf_fname = 'frente_continental_ECMWF-AUX_P_R05.h5'
 
-# nome do arquivo CWC-RO e do AUX-ECMWF
-cwc_fname = '2006235200711_01711_CS_2B-CWC-RO_GRANULE_P1_R05_E02_F00.hdf'
-ecmwf_fname = '2006235200711_01711_CS_ECMWF-AUX_GRANULE_P_R05_E02_F00.hdf'
-
-# recorte da area de estudo
-lat_min = 17.1
-lat_max = 28.6
-lon_min = -114.8
-lon_max = -112
+# recorte da area de estudo (caso continental)
+lat_min = -35
+lat_max = -27.5
+lon_min = -65
+lon_max = -40
 extent = [lon_min, lon_max, lat_min, lat_max] # South America
 
 
 #--------------------------------------------Cloudsat Temperatura --------------------------------------------------------------------------
 
 # Temperatura retirado do ECMWF e interpolado na trajetoria do cloudsat
-ecmwf_temp = get_hdf_data(os.path.join(input_, ecmwf_fname), 'Temperature')
+ecmwf_temp = read_data(os.path.join(input_, ecmwf_fname),
+                        data_field = 'Temperature', fillmask= True)
 
 # demais dimensoes do dado do ecmwf interpolado no cloudsat
-ecmwf_lons, ecmwf_lats, ecmwf_height, ecmwf_time, ecmwf_elev = get_hdf_geodata(
-    os.path.join(input_, ecmwf_fname),
-    varnames = ["Longitude", "Latitude", "EC_height", "Profile_time", "DEM_elevation"]
+ecmwf_lons, ecmwf_lats, ecmwf_height, ecmwf_time, ecmwf_elev = get_geodata(
+    os.path.join(input_, ecmwf_fname), return_list = True,
+    varnames = ['Longitude', 'Latitude', "EC_height", "Profile_time", "DEM_elevation"]
 )
 
 # Encontrar indices do array onde o recorte da area esta localizado
@@ -84,14 +83,13 @@ temperature = cloudsat_utils._interp2d_ecmwf(
 #--------------------------------------------Cloudsat Conteudo de agua liquda--------------------------------------------------------------------------
 
 # variaveis da goticula, retirada do cloudsat
-radius = get_hdf_data(os.path.join(input_, cwc_fname),'RO_ice_effective_radius') # micrometro
-concentracao = get_hdf_data(os.path.join(input_, cwc_fname), 'RO_ice_number_conc') # cm^{-3}
-conteudo = get_hdf_data(os.path.join(input_, cwc_fname), 'RO_ice_water_content') # mg/m^3
+radius = read_data(os.path.join(input_, cwc_fname),'RO_ice_effective_radius',  fillmask= True) # micrometro
+concentracao = read_data(os.path.join(input_, cwc_fname), 'RO_ice_number_conc',  fillmask= True) # cm^{-3}
+conteudo = read_data(os.path.join(input_, cwc_fname), 'RO_ice_water_content',  fillmask= True) # mg/m^3
 
 # demais dimensoes do dado do ecmwf interpolado no cloudsat
-cwc_lons, cwc_lats, cwc_height, cwc_time, cwc_elev = get_hdf_geodata(
-    os.path.join(input_, cwc_fname), 
-    varnames = ["Longitude", "Latitude", "Height", "Profile_time", "DEM_elevation"]
+cwc_lons, cwc_lats, cwc_height, cwc_time, cwc_elev = get_geodata(
+    os.path.join(input_, cwc_fname), return_list = True
 )
 
 # Encontrar indices do array onde o recorte da area esta localizado
@@ -232,5 +230,5 @@ for row in range(3):
     ax[row].set_ylim(bottom = 0)
 
 # salvando a figura
-plt.savefig(os.path.join(output, 'propriedades_gelo.png'), bbox_inches='tight')
+plt.savefig(os.path.join(output_, 'continental_propriedades_gelo.png'), bbox_inches='tight')
 plt.close()

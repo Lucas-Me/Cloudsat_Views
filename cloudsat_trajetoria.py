@@ -13,39 +13,50 @@ import os
 
 #---IMPORTS LOCAIS----------------------------------------------------------------------------------------
 
-from cloudsat_read import get_geodata
+from cloudsat_read import get_geodata, read_data
 from INPE_utilities import download_CMI, reproject, loadCPT
 
 #---VARIAVEIS-&-PREPARATIVOS----------------------------------------------------------------------------------------------------
 # Diretorios de entrada e saida de arquivos
-input = '/mnt/f/Lucas/Conteudo/Fisica das nuvens e precipitacao/Trabalho/Dados'
-output = '/mnt/f/Lucas/Conteudo/Fisica das nuvens e precipitacao/Trabalho/Figuras'
-# input = r'F:\Lucas\Conteudo\Fisica das nuvens e precipitacao\Trabalho\Dados'
-# output = r'F:\Lucas\Conteudo\Fisica das nuvens e precipitacao\Trabalho\Figuras'
-os.makedirs(output, exist_ok=True)
+# input_ = '/mnt/f/Lucas/Conteudo/Fisica das nuvens e precipitacao/Dados'
+# output_ = '/mnt/f/Lucas/Conteudo/Fisica das nuvens e precipitacao/Figuras'
+input_ = r'F:\Lucas\Conteudo\Fisica das nuvens e precipitacao\Dados'
+output_ = r'F:\Lucas\Conteudo\Fisica das nuvens e precipitacao\Figuras'
 
 # arquivos a serem abertos
-cloudsat_fname = os.path.join(input, '2019055170406_68325_CS_2B-GEOPROF_GRANULE_P_R04_E08_F01.h5')
-shapefile = list(shpreader.Reader(os.path.join(input, 'BR_UF_2019.shp')).geometries())
+cloudsat_fname = os.path.join(input_, 'frente_oceanica_2B-GEOPROF_P1_R05.h5')
+shapefile = list(shpreader.Reader(os.path.join(input_, 'BR_UF_2019.shp')).geometries())
 
-# recorte da area de estudo
-lat_min = -40
-lat_max = -20
-lon_min = -65
-lon_max = -40
+# recorte da area de estudo (caso continental)
+# lat_min = -40
+# lat_max = -20
+# lon_min = -65
+# lon_max = -40
+
+# recorte da area de estudo (caso frente oceanica)
+lat_min = -45
+lat_max = -15
+lon_min = -60
+lon_max = -30
+
 extent = [lon_min, lon_max, lat_min, lat_max] # South America
 
 # data da imagem de satelite
-yyyymmdd = "20190224"
-hhmn = "1745"
+# continental
+# yyyymmdd = "20190224" #
+# hhmn = "1745"
+
+# oceanica
+yyyymmdd = "20190207" #
+hhmn = "1645"
 _datetime = yyyymmdd + hhmn
 
 #---PREPARATIVOS DA IMAGEM DE SATELITE-----------------------------------------------------------------------------------------------------
-file_ir = download_CMI(_datetime, 13, input) # baixa a imagem, se nao existir
+file_ir = download_CMI(_datetime, 13, input_) # baixa a imagem, se nao existir
 var = 'CMI'
 
 # abre o arquivo
-img = gdal.Open(f'NETCDF:{input}/{file_ir}.nc:' + var)
+img = gdal.Open(f'NETCDF:{input_}/{file_ir}.nc:' + var)
 
 # Read the header metadata
 metadata = img.GetMetadata()
@@ -61,7 +72,7 @@ ds_cmi = img.ReadAsArray(0, 0, img.RasterXSize, img.RasterYSize).astype(float)
 ds_cmi = (ds_cmi * scale + offset) - 273.15
 
 # Reproject the file
-filename_ret = f'{output}/IR_{_datetime}.nc'
+filename_ret = f'{input_}/IR_{_datetime}.nc'
 reproject(filename_ret, img, ds_cmi, extent, undef)
 
 # Open the reprojected GOES-R image
@@ -74,8 +85,8 @@ data = file.variables['Band1'][:]
 
 # Le a passagem do cloudsat e a elevacao ao longo do caminho.
 cloudsat_lons, cloudsat_lats, cloudsat_height, cloudsat_time, elev = get_geodata(
-    cloudsat_fname, return_list=True
-)
+     cloudsat_fname, return_list = True
+)   
 
 #---PLOTAGEM-----------------------------------------------------------------------------------------------------
 
@@ -83,7 +94,7 @@ fig = plt.figure(figsize=(15,15))
 ax = plt.axes(projection=ccrs.PlateCarree())
 
 # Converte um arquivo CPT para ser usado no python
-cpt = loadCPT('IR4AVHRR6.cpt')
+cpt = loadCPT(os.path.join(input_, 'IR4AVHRR6.cpt'))
 cmap = cm.colors.LinearSegmentedColormap('cpt', cpt) 
     
 # Plot the image
@@ -112,5 +123,5 @@ plt.title('GOES-16 Band 13 ' + date.strftime('%Y-%m-%d %H:%M') + ' UTC', fontwei
 plt.title('Reg.: ' + str(extent) , fontsize=10, loc='right')
 
 # Salva a imagem
-plt.savefig(os.path.join(output, 'Teste_cloudsat.jpg'), bbox_inches='tight', pad_inches=0, dpi=300)
+plt.savefig(os.path.join(output_, 'Satelite_oceanica_cloudsat_trajetoria.jpg'), bbox_inches='tight', pad_inches=0, dpi=300)
 plt.close()

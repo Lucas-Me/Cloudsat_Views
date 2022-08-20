@@ -11,18 +11,19 @@ from metpy.units import units
 
 #---IMPORTS LOCAIS----------------------------------------------------------------------------------------
 
-from cloudsat_functions import get_hdf_geodata, get_hdf_data
+from cloudsat_read import get_geodata, read_data
 import cloudsat_utils
 
 #---VARIAVEIS E PREPARATIVOS--------------------------------------------------------------------------
 # Diretorios de entrada e saida de arquivos
-input_ = '/mnt/f/lucas/conteudo/fisica das nuvens e precipitacao/Dados'
-output = '/mnt/f/lucas/conteudo/fisica das nuvens e precipitacao/Figuras'
+# input_ = '/mnt/f/lucas/conteudo/fisica das nuvens e precipitacao/Dados'
+# output = '/mnt/f/lucas/conteudo/fisica das nuvens e precipitacao/Figuras'
+input_ = r'F:\Lucas\Conteudo\Fisica das nuvens e precipitacao\Dados'
+output_ = r'F:\Lucas\Conteudo\Fisica das nuvens e precipitacao\Figuras'
 
 # nome do arquivo geoprof
-geoprof_fname = '2019055170406_68325_CS_2B-GEOPROF_GRANULE_P1_R05_E08_F03.hdf'
-
-ecmwf_fname = '2019055170406_68325_CS_ECMWF-AUX_GRANULE_P_R05_E08_F03.hdf'
+geoprof_fname = 'frente_continental_2B-GEOPROF_P1_R05.h5'
+ecmwf_fname = 'frente_continental_ECMWF-AUX_P_R05.h5'
 
 # recorte da area de estudo
 lat_min = -35
@@ -34,14 +35,12 @@ extent = [lon_min, lon_max, lat_min, lat_max] # South America
 #---Cloudsat Refletividade--------------------------------------------------------------------------
 
 # Refletividade do cloudsat
-cldst_radar = get_hdf_data(os.path.join(input_, geoprof_fname), "Radar_Reflectivity")
-fator = 100 # fator dessa variavel
-offset = 0 # offset dessa variavel
-cldst_radar = (cldst_radar - offset)/fator
+cldst_radar = read_data(os.path.join(input_, geoprof_fname),
+                        "Radar_Reflectivity", fillmask = True)
 
 # dimensoes do dado
-cldst_lons, cldst_lats, cldst_height, cldst_time, cldst_elev = get_hdf_geodata(
-    os.path.join(input_, geoprof_fname),
+cldst_lons, cldst_lats, cldst_height, cldst_time, cldst_elev = get_geodata(
+    os.path.join(input_, geoprof_fname), return_list=True,
     varnames = ["Longitude", "Latitude", "Height", "Profile_time", "DEM_elevation"]
 )
 cldst_elev = cldst_elev * 1e-3 # convertendo elevacao para km.
@@ -89,9 +88,9 @@ cldst_radar = interpolator(Xi, Yi)
 #---Cloudsat Temperatura Potencial--------------------------------------------------------------------------
 
 # Temperatura e Pressao retirado do ECMWF e interpolado na trajetoria do cloudsat
-ecmwf_temp = get_hdf_data(os.path.join(input_, ecmwf_fname), 'Temperature') # em kelvin
-ecmwf_press = get_hdf_data(os.path.join(input_, ecmwf_fname), 'Pressure')*1e-2 # converte de Pa para hPa
-ecmwf_specific_umidity =  get_hdf_data(os.path.join(input_, ecmwf_fname), 'Specific_humidity') # em kg/kg
+ecmwf_temp = read_data(os.path.join(input_, ecmwf_fname), 'Temperature', fillmask = True) # em kelvin
+ecmwf_press = read_data(os.path.join(input_, ecmwf_fname), 'Pressure', fillmask = True)*1e-2 # converte de Pa para hPa
+ecmwf_specific_umidity =  read_data(os.path.join(input_, ecmwf_fname), 'Specific_humidity', fillmask = True) # em kg/kg
 
 ecmwf_dewpoint = thermo.dewpoint_from_specific_humidity(
     pressure = ecmwf_press * units.mbar,
@@ -105,24 +104,10 @@ theta_e = thermo.equivalent_potential_temperature(
     dewpoint = ecmwf_dewpoint
 )
 
-# # calculo de theta
-# R = 0.286
-# theta = ecmwf_temp*(1000/ecmwf_press)**(R)
-
-# # calculo da pressao de vapor de saturacao
-# A = 2.53*(10**8)*10 # kPam converte pra hPa
-# B = 5.42*(10**3) # K
-
-# # calculo da theta_e (temperatura potencial equivalente)
-# Td = B/np.log(A*0.622/(ecmwf_press*ecmwf_specific_umidity)) # em kelvin
-# Tncl = 1/(1/(Td-56)+np.log(ecmwf_temp/Td)/800)+56
-# L = 2.5e6
-# Cp = 1005
-# theta_e = theta*np.exp(ecmwf_specific_umidity*L/(Cp*Tncl))
 
 # demais dimensoes do dado do ecmwf interpolado no cloudsat
-ecmwf_lons, ecmwf_lats, ecmwf_height, ecmwf_time, ecmwf_elev = get_hdf_geodata(
-    os.path.join(input_, ecmwf_fname),
+ecmwf_lons, ecmwf_lats, ecmwf_height, ecmwf_time, ecmwf_elev = get_geodata(
+    os.path.join(input_, ecmwf_fname), return_list= True,
     varnames = ["Longitude", "Latitude", "EC_height", "Profile_time", "DEM_elevation"]
 )
 
@@ -233,5 +218,5 @@ ax.set_ylim(bottom = 0)
 plt.title('Refletividade do Radar (dBZe) e Temperatura Potencial Equivalente (K)', loc='left')
 
 # salvando a figura
-plt.savefig(os.path.join(output, 'cloudsat_refletividade.png'), bbox_inches='tight')
+plt.savefig(os.path.join(output_, 'cloudsat_refletividade_continental.png'), bbox_inches='tight')
 plt.close()
