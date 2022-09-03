@@ -21,14 +21,27 @@ import cloudsat_utils
 input_ = r'F:\Lucas\Conteudo\Fisica das nuvens e precipitacao\Dados'
 output_ = r'F:\Lucas\Conteudo\Fisica das nuvens e precipitacao\Figuras'
 
-# nome do arquivo geoprof
-geoprof_fname = 'frente_continental_2B-GEOPROF_P1_R05.h5'
-ecmwf_fname = 'frente_continental_ECMWF-AUX_P_R05.h5'
+'''Caso Frente Fria Continental'''
+# # nome do arquivo geoprof 
+# geoprof_fname = 'frente_continental_2B-GEOPROF_P1_R05.h5'
+# ecmwf_fname = 'frente_continental_ECMWF-AUX_P_R05.h5'
+
+# # recorte da area de estudo
+# lat_min = -35
+# lat_max = -27.5
+# lon_min = -65
+# lon_max = -40
+# extent = [lon_min, lon_max, lat_min, lat_max] # South America
+
+'''Caso Frente Fria Oceanica'''
+# nome do arquivo geoprof 
+geoprof_fname = 'frente_oceanica_2B-GEOPROF_P1_R05.h5'
+ecmwf_fname = 'frente_oceanica_ECMWF-AUX_P_R05.h5'
 
 # recorte da area de estudo
-lat_min = -35
-lat_max = -27.5
-lon_min = -65
+lat_min = -30
+lat_max = -20
+lon_min = -45
 lon_max = -40
 extent = [lon_min, lon_max, lat_min, lat_max] # South America
 
@@ -104,12 +117,12 @@ theta_e = thermo.equivalent_potential_temperature(
     dewpoint = ecmwf_dewpoint
 )
 
-
 # demais dimensoes do dado do ecmwf interpolado no cloudsat
 ecmwf_lons, ecmwf_lats, ecmwf_height, ecmwf_time, ecmwf_elev = get_geodata(
     os.path.join(input_, ecmwf_fname), return_list= True,
     varnames = ["Longitude", "Latitude", "EC_height", "Profile_time", "DEM_elevation"]
 )
+
 
 # Encontrar indices do array onde o recorte da area esta localizado
 # diferente pro dado interpolado e pro extraido diretamente do cloudat (secao anterior)
@@ -218,5 +231,5 @@ ax.set_ylim(bottom = 0)
 plt.title('Refletividade do Radar (dBZe) e Temperatura Potencial Equivalente (K)', loc='left')
 
 # salvando a figura
-plt.savefig(os.path.join(output_, 'cloudsat_refletividade_continental.png'), bbox_inches='tight')
+plt.savefig(os.path.join(output_, 'cloudsat_refletividade_oceanica.png'), bbox_inches='tight')
 plt.close()
