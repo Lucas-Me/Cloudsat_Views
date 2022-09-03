@@ -24,7 +24,7 @@ input_ = r'F:\Lucas\Conteudo\Fisica das nuvens e precipitacao\Dados'
 output_ = r'F:\Lucas\Conteudo\Fisica das nuvens e precipitacao\Figuras'
 
 # arquivos a serem abertos
-cloudsat_fname = os.path.join(input_, 'frente_oceanica_2B-GEOPROF_P1_R05.h5')
+cloudsat_fname = os.path.join(input_, 'frente_oceanica_2B-GEOPROF.h5')
 shapefile = list(shpreader.Reader(os.path.join(input_, 'BR_UF_2019.shp')).geometries())
 
 # recorte da area de estudo (caso continental)
@@ -34,10 +34,10 @@ shapefile = list(shpreader.Reader(os.path.join(input_, 'BR_UF_2019.shp')).geomet
 # lon_max = -40
 
 # recorte da area de estudo (caso frente oceanica)
-lat_min = -45
+lat_min = -55
 lat_max = -15
 lon_min = -60
-lon_max = -30
+lon_max = -15
 
 extent = [lon_min, lon_max, lat_min, lat_max] # South America
 
@@ -47,12 +47,13 @@ extent = [lon_min, lon_max, lat_min, lat_max] # South America
 # hhmn = "1745"
 
 # oceanica
-yyyymmdd = "20190207" #
-hhmn = "1645"
+yyyymmdd = "20190701" #
+hhmn = "1600"
 _datetime = yyyymmdd + hhmn
 
 #---PREPARATIVOS DA IMAGEM DE SATELITE-----------------------------------------------------------------------------------------------------
-file_ir = download_CMI(_datetime, 13, input_) # baixa a imagem, se nao existir
+# file_ir = download_CMI(_datetime, 13, input_) # baixa a imagem, se nao existir
+file_ir =  'OR_ABI-L2-CMIPF-M6C13_G16_s20191821600278_e20191821609597_c20191821610071' # pra frente oceanica
 var = 'CMI'
 
 # abre o arquivo
@@ -123,5 +124,5 @@ plt.title('GOES-16 Band 13 ' + date.strftime('%Y-%m-%d %H:%M') + ' UTC', fontwei
 plt.title('Reg.: ' + str(extent) , fontsize=10, loc='right')
 
 # Salva a imagem
-plt.savefig(os.path.join(output_, 'Satelite_oceanica_cloudsat_trajetoria.jpg'), bbox_inches='tight', pad_inches=0, dpi=300)
+plt.savefig(os.path.join(output_, 'Satelite_oceanica_cloudsat_trajetoria.jpg'), bbox_inches='tight', dpi=300)
 plt.close()

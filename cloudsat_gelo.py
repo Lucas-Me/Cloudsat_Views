@@ -21,17 +21,29 @@ import cloudsat_utils
 input_ = r'F:\Lucas\Conteudo\Fisica das nuvens e precipitacao\Dados'
 output_ = r'F:\Lucas\Conteudo\Fisica das nuvens e precipitacao\Figuras'
 
-# nome dos arquivos CWC-RO e do AUX-ECMWF (caso continental)
-cwc_fname = 'frente_continental_2B-CWC-RO_P1_R05.h5'
-ecmwf_fname = 'frente_continental_ECMWF-AUX_P_R05.h5'
+'''Caso Frente Fria Continental'''
+# # nome dos arquivos CWC-RO e do AUX-ECMWF (caso continental)
+# cwc_fname = 'frente_continental_2B-CWC-RO_P1_R05.h5'
+# ecmwf_fname = 'frente_continental_ECMWF-AUX_P_R05.h5'
 
-# recorte da area de estudo (caso continental)
-lat_min = -35
-lat_max = -27.5
-lon_min = -65
-lon_max = -40
+# # recorte da area de estudo (caso continental)
+# lat_min = -35
+# lat_max = -27.5
+# lon_min = -65
+# lon_max = -40
+# extent = [lon_min, lon_max, lat_min, lat_max] # South America
+
+'''Caso Frente Fria Oceanica'''
+# nome do arquivo geoprof 
+cwc_fname = 'frente_oceanica_2B-CWC-RO.h5'
+ecmwf_fname = 'frente_oceanica_ECMWF-AUX.h5'
+
+# recorte da area de estudo
+lat_min = -40
+lat_max = -29
+lon_min = -30
+lon_max = -25
 extent = [lon_min, lon_max, lat_min, lat_max] # South America
-
 
 #--------------------------------------------Cloudsat Temperatura --------------------------------------------------------------------------
 
@@ -80,7 +92,7 @@ temperature = cloudsat_utils._interp2d_ecmwf(
     ecmwf_nz,
 ).T[::-1, :]
 
-#--------------------------------------------Cloudsat Conteudo de agua liquda--------------------------------------------------------------------------
+#--------------------------------------------Cloudsat Conteudo de gelo----------
 
 # variaveis da goticula, retirada do cloudsat
 radius = read_data(os.path.join(input_, cwc_fname),'RO_ice_effective_radius',  fillmask= True) # micrometro
@@ -177,8 +189,7 @@ for row in range(3):
     kw_clabels = {'fontsize': 12, 'inline': True, 'inline_spacing': 5, 'fmt': '%i',
                 'rightside_up': True, 'use_clabeltext': True}
     temp_contour = ax[row].contour(
-        # ecmwf_lats[i1:i2],
-        ecmwf_x,
+        ecmwf_lats[i1:i2],
         np.linspace(ecmwf_z0, ecmwf_z1, ecmwf_nz),
         temperature - 273.15,
         np.linspace(-60, 20, 5),
@@ -201,8 +212,7 @@ for row in range(3):
 
     # plot contourf
     p = ax[row].contourf(
-        #np.take(cwc_lats, Xi),
-        Xi,
+        np.take(cwc_lats, Xi.astype('int64')),
         Yi,
         vars_[row],
         levels = clevs[row],
@@ -220,8 +230,7 @@ for row in range(3):
 
     # plot da elevacao
     ax[row].fill_between(
-        #cwc_lats[j1:j2],
-        cwc_x,
+        cwc_lats[j1:j2],
         cwc_elev[j1:j2]*1e-3,
         color = "black"
     )
@@ -230,5 +239,5 @@ for row in range(3):
     ax[row].set_ylim(bottom = 0)
 
 # salvando a figura
-plt.savefig(os.path.join(output_, 'continental_propriedades_gelo.png'), bbox_inches='tight')
+plt.savefig(os.path.join(output_, 'oceanico_propriedades_gelo.png'), bbox_inches='tight')
 plt.close()

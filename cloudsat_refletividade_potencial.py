@@ -22,28 +22,28 @@ input_ = r'F:\Lucas\Conteudo\Fisica das nuvens e precipitacao\Dados'
 output_ = r'F:\Lucas\Conteudo\Fisica das nuvens e precipitacao\Figuras'
 
 '''Caso Frente Fria Continental'''
-# # nome do arquivo geoprof 
-# geoprof_fname = 'frente_continental_2B-GEOPROF_P1_R05.h5'
-# ecmwf_fname = 'frente_continental_ECMWF-AUX_P_R05.h5'
-
-# # recorte da area de estudo
-# lat_min = -35
-# lat_max = -27.5
-# lon_min = -65
-# lon_max = -40
-# extent = [lon_min, lon_max, lat_min, lat_max] # South America
-
-'''Caso Frente Fria Oceanica'''
 # nome do arquivo geoprof 
-geoprof_fname = 'frente_oceanica_2B-GEOPROF_P1_R05.h5'
-ecmwf_fname = 'frente_oceanica_ECMWF-AUX_P_R05.h5'
+geoprof_fname = 'frente_continental_2B-GEOPROF_P1_R05.h5'
+ecmwf_fname = 'frente_continental_ECMWF-AUX_P_R05.h5'
 
 # recorte da area de estudo
-lat_min = -30
-lat_max = -20
-lon_min = -45
+lat_min = -35
+lat_max = -27.5
+lon_min = -65
 lon_max = -40
 extent = [lon_min, lon_max, lat_min, lat_max] # South America
+
+'''Caso Frente Fria Oceanica'''
+# # nome do arquivo geoprof 
+# geoprof_fname = 'frente_oceanica_2B-GEOPROF.h5'
+# ecmwf_fname = 'frente_oceanica_ECMWF-AUX.h5'
+
+# # recorte da area de estudo
+# lat_min = -40
+# lat_max = -29
+# lon_min = -30
+# lon_max = -25
+# extent = [lon_min, lon_max, lat_min, lat_max] # South America
 
 #---Cloudsat Refletividade--------------------------------------------------------------------------
 
@@ -72,7 +72,7 @@ cloudsat_x = np.arange(i1, i2, dtype = np.float32)
 
 # grade na vertical
 cloudsat_z0 = 1  # km
-cloudsat_z1 = 16  # km
+cloudsat_z1 = 18  # km
 cloudsat_nz = 1000  # Number of pixels (levels) in the vertical.
 cloudsat_z = (cldst_height * 1e-3).astype(np.float32)
 zi = np.linspace(cloudsat_z0, cloudsat_z1, cloudsat_nz)
@@ -231,5 +231,5 @@ ax.set_ylim(bottom = 0)
 plt.title('Refletividade do Radar (dBZe) e Temperatura Potencial Equivalente (K)', loc='left')
 
 # salvando a figura
-plt.savefig(os.path.join(output_, 'cloudsat_refletividade_oceanica.png'), bbox_inches='tight')
+plt.savefig(os.path.join(output_, 'cloudsat_refletividade_continental.png'), bbox_inches='tight')
 plt.close()
